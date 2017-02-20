@@ -53,7 +53,7 @@ function glRoutine(gl, vs, fs, ts, cs) {
     var tarPos = [0, 0, 0];
     var up = [0, 1, 0];
 
-    var translationMatrix = twgl.m4.identity();
+    var transformationMatrix = twgl.m4.identity();
     var camMatrix = twgl.m4.lookAt(camPos, tarPos, up);
     var viewMatrix = twgl.m4.inverse(camMatrix);
 
@@ -80,9 +80,9 @@ function glRoutine(gl, vs, fs, ts, cs) {
         // Advance the time after drawing the frame
         then = now;
 
-        translationMatrix = twgl.m4.rotationX(rotationSpeed*dist);
+        transformationMatrix = twgl.m4.rotationX(rotationSpeed*dist);
 
-        viewMatrix = twgl.m4.multiply(viewMatrix, translationMatrix);
+        viewMatrix = twgl.m4.multiply(viewMatrix, transformationMatrix);
     }
     drawScene(now);
 }
