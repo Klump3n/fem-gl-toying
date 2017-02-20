@@ -8,3 +8,6 @@ Clone into a local folder and start a HTTP server in that folder (for example un
 
 This relies on [twgl.js](https://github.com/greggman/twgl.js/) to keep the number 
 of WebGL boilerplate lines low.
+
+TODO
+[ ] Much commenting.
