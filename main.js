@@ -24,16 +24,23 @@ function glRoutine(gl, vs, fs, ts, cs) {
     var arrays = {
         a_position: {
             numComponents: 3,
-            data: ts.split(',')
+            data: ts.split(',') // Split data on comma
         },
         a_color: {
             numComponents: 3,
             type: gl.UNSIGNED_BYTE,
             normalized: true,
             data: new Uint8Array(
-                cs.split(',')
+                cs.split(',')   // Split data on comma
             )}
     };
+
+    var modelMatrix = new ModelMatrix(gl);
+
+    var camPos = [1, 0, -500];
+    var tarPos = [0, 0, 0];
+    var up = [0, 0, 1];
+    modelMatrix.placeCamera(camPos, tarPos, up);
 
     var bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
     twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -46,29 +53,21 @@ function glRoutine(gl, vs, fs, ts, cs) {
 	  gl.enable(gl.CULL_FACE);
 	  gl.enable(gl.DEPTH_TEST);
 
-    // Set up out frustum
-    var perspective = twgl.m4.perspective(30 * Math.PI / 180, gl.canvas.clientWidth/gl.canvas.clientHeight, 1, 2000);
-
-    var camPos = [500, 30, -200];
-    var tarPos = [0, 0, 0];
-    var up = [0, 1, 0];
-
-    var transformationMatrix = twgl.m4.identity();
-    var camMatrix = twgl.m4.lookAt(camPos, tarPos, up);
-    var viewMatrix = twgl.m4.inverse(camMatrix);
-
     var now = 0,
         then = 0,
         dt = 0;
 
     var rotationSpeed = 60;    // Degrees per second
 
+    var transformationMatrix = twgl.m4.identity();
+
     function drawScene(now) {
 
         dt = (now - then)*.001;    // Conversion to seconds
         var dist = dt*Math.PI/180;  // in radiant
 
-        uniforms.u_transform = twgl.m4.multiply(perspective, viewMatrix);
+        // Update the model view
+        uniforms.u_transform = modelMatrix.updateView(0);
 
         gl.useProgram(programInfo.program);
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
@@ -80,9 +79,6 @@ function glRoutine(gl, vs, fs, ts, cs) {
         // Advance the time after drawing the frame
         then = now;
 
-        transformationMatrix = twgl.m4.rotationX(rotationSpeed*dist);
-
-        viewMatrix = twgl.m4.multiply(viewMatrix, transformationMatrix);
     }
     drawScene(now);
 }
@@ -120,5 +116,3 @@ function main() {
                  );
     });
 };
-
-main();
