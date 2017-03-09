@@ -47,9 +47,11 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     this.worldMatrix = twgl.m4.identity();
     this.worldState = twgl.m4.identity();
 
-    this.viewMatrix = twgl.m4.identity();
-    this.camMatrix = twgl.m4.identity();
-    this.projectionMatrix = twgl.m4.identity();
+    this.targetCameraVector = twgl.v3.create(0, 0, 0);
+    this.worldTranslation = twgl.v3.create(0, 0, 0);
+
+    that.rotPhi = twgl.m4.identity();
+    that.rotTheta = twgl.m4.identity();
 
     /**
      * Create the frustum of our view.
@@ -63,6 +65,8 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      */
     this.setFrustum = function(fovIn, aspectIn, zNearIn, zFarIn) {
 
+        this.projectionMatrix = twgl.m4.identity();
+
         this.fov = 30 * Math.PI / 180 || fovIn;
         this.aspect = gl.canvas.clientWidth/gl.canvas.clientHeight || aspectIn;
         this.zNear = 1 || zNearIn;
@@ -70,9 +74,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
         /** Calculate the perspective matrix. */
         this.projectionMatrix = twgl.m4.perspective(this.fov, this.aspect, this.zNear, this.zFar);
-        this.modelView = twgl.m4.multiply(this.modelView, this.projectionMatrix);
     };
-
 
     /**
      * Creates a viewMatrix by inverting the camera matrix,
@@ -82,42 +84,84 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      * @param {vec3} upVector - A vector that points upwards.
      */
     this.placeCamera = function(viewerPosition, targetPosition, upVector) {
+
+        this.viewMatrix = twgl.m4.identity();
+        this.camMatrix = twgl.m4.identity();
+
+        this.viewerPosition = viewerPosition;
+        this.targetPosition = targetPosition;
+        this.upVector = upVector;
+
+        // Store this for later (definition of rotational axis).
+        this.targetCameraVector = twgl.v3.subtract(viewerPosition, targetPosition);
+        this.targetCameraVector = twgl.v3.normalize(this.targetCameraVector);
+
         this.camMatrix = twgl.m4.lookAt(viewerPosition, targetPosition, upVector);
         this.viewMatrix = twgl.m4.inverse(this.camMatrix);
-        this.modelView = twgl.m4.multiply(this.modelView, this.viewMatrix);
     };
+
+    /**
+     * Update the viewer position.
+     * @param {vec3} viewerPosition - The position of the viewer.
+     * @param {vec3} targetPosition - The position of the target.
+     * @param {vec3} upVector - A vector that points upwards.
+     */
+    this.updateCamera = function(viewerPosition, targetPosition, upVector) {
+        this.camMatrix = twgl.m4.lookAt(viewerPosition, targetPosition, upVector);
+        this.viewMatrix = twgl.m4.inverse(this.camMatrix);
+    };
+
+    /**
+     * Translates the world by a given vector.
+     * @param {vec3} translate
+     */
+    this.translateWorld = function(translate ) {
+        this.worldTranslation = translate;
+        this.worldMatrix = twgl.m4.translate(this.worldMatrix, translate);
+    };
+
 
     /**
      * Update the modelView matrix.
      * @returns {mat4} The modelView matrix.
      */
     this.updateView = function() {
-        this.modelView = twgl.m4.multiply(
-            this.modelView,
-            twgl.m4.rotationX(dx/1000)
-        );
-        this.modelView = twgl.m4.multiply(
-            this.modelView,
-            twgl.m4.rotationY(dy/1000)
-        );
+        this.modelView = twgl.m4.multiply(this.projectionMatrix, this.viewMatrix);
+        this.modelView = twgl.m4.multiply(this.modelView, this.worldMatrix);
+        this.modelView = twgl.m4.translate(this.modelView, twgl.v3.negate(this.worldTranslation));
+        this.modelView = twgl.m4.multiply(this.modelView, this.rotPhi);
+        this.modelView = twgl.m4.multiply(this.modelView, this.rotTheta);
+        this.modelView = twgl.m4.translate(this.modelView, this.worldTranslation);
 
+        /**
+         * this.worldState gives the state of the coordinate system.
+         * Matrix organisation is as follows
+         * w0 w4 w8  w12 -- x-axis, 3 coordinates and 1 translation
+         * w1 w5 w9  w13 -- y-axis, 3 coordinates and 1 translation
+         * w2 w6 w10 w14 -- z-axis, 3 coordinates and 1 translation
+         * w3 w7 w11 w15
+         */
+        this.worldState = twgl.m4.multiply(twgl.m4.inverse(this.projectionMatrix), this.modelView);
         return this.modelView;
     };
 
     /** Variables for tracking the mouse movement and dragging events. */
-    var nowPointer = 0;
-    var x = 0;
-    var y = 0;
-    var prevPointer = 0;
-    var prevx = 0;
-    var prevy = 0;
-    var dx = 0;
-    var dy = 0;
-    var dragging = false;
     var x_center = gl.canvas.clientWidth / 2;
+    var x_prev = 0,
+        x_now = 0,
+        dx = 0;
     var y_center = gl.canvas.clientHeight /2;
-    var timer;
+    var y_prev = 0,
+        y_now = 0,
+        dy = 0;
 
+    var dragging = false;
+
+    var phi = 0;
+    var dphi = 0;
+    var theta = 0;
+    var dtheta = 0;
+    var thetaAxis = twgl.v3.create(0, 0, 0);
 
     /**
      * Callback function for a mouse-button-down event. Sets dragging
@@ -132,9 +176,11 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         dragging = true;
         document.addEventListener("mousemove", doMouseMove, true);
         document.addEventListener("mouseup", doMouseUp, false);
-        prevPointer = [event.clientX, event.clientX];
         prevx = event.clientX;
         prevy = event.clientY;
+
+        // Create an orthogonal vector to eye vector and up vector
+        thetaAxis = twgl.v3.cross(that.targetCameraVector, that.upVector);
     }
 
     /**
@@ -148,33 +194,48 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
             return;
         }
 
-        prevPointer = [prevx, prevy];
-        nowPointer = [event.clientX, event.clientX];
-        // ROTATETHEMATRIX;
-        console.log(nowPointer);
-        prevPointer = nowPointer;
-        // Change this to a spherical thing...
-        clearTimeout(timer);
+        // Get current coordinates
+        x_now = event.clientX - x_center;
+        y_now = y_center - event.clientY;
+        dx = x_now - x_prev;
+        dy = y_now - y_prev;
 
-        x = event.clientX;
-        y = event.clientY;
-        dx = x - prevx;
-        dy = y - prevy;
-        prevx = x;
-        prevy = y;
+        // Invert up-and-down dragging logic when we face the back
+        var front = (Math.abs(phi) < Math.PI/2);
+        if (!front) {
+            dy = - dy;
+        }
 
-        // Wait 10ms until you set dx and dy to 0
-        // If we define a function that rotates our object just by dx and call this from inside this function then we dont need this crap. Define a unit circle and so on... In that reference frame we can do our calculations.
-        // 
-        timer = setTimeout(function(){
-            dx = 0;
-            dy = 0;
-        }, 10);
+        // Set interval
+        dphi = 10/gl.canvas.clientWidth * dx;
+        dtheta = 10/gl.canvas.clientHeight * dy;
 
-        // Pseudocode
-        // prev = some_v2
-        // now = current_v2
-        // someFuncThatRotates(prev, now)
+        phi = phi + dphi;
+        theta = theta + dtheta;
+
+        // Clamp the angles
+        if (phi < -Math.PI) {
+            phi = Math.PI;
+        } else if (phi > Math.PI) {
+            phi = -Math.PI;
+        };
+
+        if (theta > Math.PI/2) {
+            theta = Math.PI/2;
+        }
+        else if (theta < -Math.PI/2) {
+            theta = -Math.PI/2;
+        };
+
+        // Note: at some point I would like to do this with quaternios
+        // or euler angles...
+        // Set the rotations
+        that.rotPhi = twgl.m4.axisRotation(that.upVector, phi);
+        that.rotTheta = twgl.m4.axisRotation(thetaAxis, theta);
+
+        // Update coordinates
+        x_prev = x_now;
+        y_prev = y_now;
     }
 
     /**
@@ -192,27 +253,9 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         dx = 0;
         prevx = 0;
         dy = 0;
-
         prevy = 0;
+
         dragging = false;
-    }
-
-
-    /**
-     * Returns the norm of the difference between two given vectors. If only
-     * one vector is supplied it will calculate the norm of the given vector.
-     * @param {2D_FLOAT32_ARRAY} first_vector
-     * @param {2D_FLOAT32_ARRAY} second_vector - [OPTIONAL]
-     * @returns {2D_FLOAT32_ARRAY} The norm of the difference between the
-     * given vectors.
-     */
-    function vec2norm(first_vector, second_vector) {
-        var x0 = first_vector[0];
-        var y0 = first_vector[1];
-        var x1 = second_vector[0] || 0;
-        var y1 = second_vector[1] || 0;
-
-        return Math.sqrt(Math.pow(x0-x1, 2)) + Math.pow(y0-y1, 2);
     }
 
     /** Initialise the eventListener for mouse-button-pressing */

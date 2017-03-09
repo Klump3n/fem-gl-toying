@@ -206,9 +206,6 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         dx = x_now - x_prev;
         dy = y_now - y_prev;
 
-        phi = phi + dphi;
-        theta = theta + dtheta;
-
         // Invert up-and-down dragging logic when we face the back
         var front = (Math.abs(phi) < Math.PI/2);
         if (!front) {
@@ -218,6 +215,9 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         // Set interval
         dphi = 10/gl.canvas.clientWidth * dx;
         dtheta = 10/gl.canvas.clientHeight * dy;
+
+        phi = phi + dphi;
+        theta = theta + dtheta;
 
         // Clamp the angles
         if (phi < -Math.PI) {
