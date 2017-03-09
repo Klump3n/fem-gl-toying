@@ -13,3 +13,4 @@ of WebGL boilerplate lines low.
 ### TODO
 
 - [ ] PROPER Documentation
+- [ ] Make small functions more performant.

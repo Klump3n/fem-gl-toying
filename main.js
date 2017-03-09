@@ -56,9 +56,9 @@ function glRoutine(gl, vs, fs, ts, cs) {
 
     var modelMatrix = new ModelMatrix(gl);
 
-    var camPos = [1, 0, -500];
+    var camPos = [1, 0, 1000];
     var tarPos = [0, 0, 0];
-    var up = [0, 0, 1];
+    var up = [0, -1, 0];
     modelMatrix.placeCamera(camPos, tarPos, up);
 
     var bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
@@ -80,13 +80,17 @@ function glRoutine(gl, vs, fs, ts, cs) {
 
     var transformationMatrix = twgl.m4.identity();
 
+    modelMatrix.placeCamera([100, 400, -400], tarPos, up);
+
+    modelMatrix.translateWorld([-50, -75, -15]); // Center the model
+
     function drawScene(now) {
 
         dt = (now - then)*.001;    // Conversion to seconds
         var dist = dt*Math.PI/180;  // in radiant
 
         // Update the model view
-        uniforms.u_transform = modelMatrix.updateView(0);
+        uniforms.u_transform = modelMatrix.updateView();
 
         gl.useProgram(programInfo.program);
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
