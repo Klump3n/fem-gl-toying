@@ -229,6 +229,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
         // Note: at some point I would like to do this with quaternios
         // or euler angles...
+        // http://math.hws.edu/graphicsbook/demos/c7/rotators.html
         // Set the rotations
         that.rotPhi = twgl.m4.axisRotation(that.upVector, phi);
         that.rotTheta = twgl.m4.axisRotation(thetaAxis, theta);

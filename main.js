@@ -37,7 +37,7 @@ function grabCanvas(canvasElementName) {
 }
 
 // This is called with established context and shaders loaded
-function glRoutine(gl, vs, fs, ts, cs) {
+function glRoutine(gl, vs, fs, ts, cs, s_Tris, s_Temps, s_Inds) {
     var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
     var arrays = {
@@ -54,6 +54,25 @@ function glRoutine(gl, vs, fs, ts, cs) {
             )}
     };
 
+    var small_arrays = {
+        a_position: {
+            numComponents: 3,
+            data: s_Tris.split(',')
+        },
+        a_color: {
+            numComponents: 3,
+            type: gl.UNSIGNED_BYTE,
+            normalized: true,
+            data: new Uint8Array(
+                s_Temps.split(',')
+            )
+        },
+        indices: {              // NOTE: This must be named indices or it will not work.
+            numComponents: 1,
+            data: s_Inds.split(',')
+        }
+    };
+
     var modelMatrix = new ModelMatrix(gl);
 
     var camPos = [1, 0, 1000];
@@ -61,7 +80,8 @@ function glRoutine(gl, vs, fs, ts, cs) {
     var up = [0, -1, 0];
     modelMatrix.placeCamera(camPos, tarPos, up);
 
-    var bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+    var bufferInfo = twgl.createBufferInfoFromArrays(gl, small_arrays);
+    // var bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -80,9 +100,9 @@ function glRoutine(gl, vs, fs, ts, cs) {
 
     var transformationMatrix = twgl.m4.identity();
 
-    modelMatrix.placeCamera([100, 400, -400], tarPos, up);
+    modelMatrix.placeCamera([0, 1, 1], tarPos, up);
 
-    modelMatrix.translateWorld([-50, -75, -15]); // Center the model
+    // modelMatrix.translateWorld([-50, -75, -15]); // Center the model
 
     function drawScene(now) {
 
@@ -113,6 +133,11 @@ function main() {
     // Promise to load the data from file.
     var trianglePromise = getDataSourcePromise("data/f_bare.triangles");
     var colorPromise = getDataSourcePromise("data/f_bare.colors");
+
+    var small_trianglePromise = getDataSourcePromise("data/welding_sim.triangles");
+    var small_temperaturePromise = getDataSourcePromise("data/welding_sim.temperatures");
+    var small_indexPromise = getDataSourcePromise("data/welding_sim.indices");
+
     var vertexShaderPromise = getDataSourcePromise("shaders/vertexShader.glsl.c");
     var fragmentShaderPromise = getDataSourcePromise("shaders/fragmentShader.glsl.c");
 
@@ -122,7 +147,10 @@ function main() {
             trianglePromise,      // 0
             colorPromise,         // 1
             vertexShaderPromise,  // 2
-            fragmentShaderPromise // 3
+            fragmentShaderPromise, // 3
+            small_trianglePromise,
+            small_temperaturePromise,
+            small_indexPromise,
         ]
         // ... then ...
     ).then(function(value) {
@@ -131,11 +159,15 @@ function main() {
         var colorSource = value[1];
         var vertexShaderSource = value[2];
         var fragmentShaderSource = value[3];
+        var small_triangleSource = value[4];
+        var small_temperatureSource = value[5];
+        var small_indexSource = value[6];
 
         // ... call the GL routine (i.e. do the graphics stuff)
         glRoutine(gl,
                   vertexShaderSource, fragmentShaderSource,
-                  triangleSource, colorSource // Let's see if we can't to this globally?
+                  triangleSource, colorSource, // Let's see if we can't to this globally?
+                  small_triangleSource, small_temperatureSource, small_indexSource
                  );
     });
 };
