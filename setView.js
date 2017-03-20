@@ -133,6 +133,8 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         this.modelView = twgl.m4.multiply(this.modelView, this.rotTheta);
         this.modelView = twgl.m4.translate(this.modelView, this.worldTranslation);
 
+        
+        this.resetZoom();
         /**
          * this.worldState gives the state of the coordinate system.
          * Matrix organisation is as follows
@@ -156,6 +158,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         dy = 0;
 
     var dragging = false;
+    var translating_model = false;
 
     var phi = 0;
     var dphi = 0;
@@ -170,12 +173,21 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      * @param {} event
      */
     function doMouseDown(event){
-        if (dragging) {
+        if (dragging || translating_model) {
             return;
-        };
-        dragging = true;
+        }
+
+        if (!event.ctrlKey) {
+            dragging = true;
+        }
+
+        if (event.ctrlKey) {
+            translating_model = true;
+        }
+
         document.addEventListener("mousemove", doMouseMove, true);
         document.addEventListener("mouseup", doMouseUp, false);
+
         prevx = event.clientX;
         prevy = event.clientY;
 
@@ -258,8 +270,18 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
         dragging = false;
     }
+    var delta;
+    function doMouseWheel(event){
+        delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
+    }
+
+    this.resetZoom = function() {
+        delta = 0;
+    };
 
     /** Initialise the eventListener for mouse-button-pressing */
     gl.canvas.addEventListener("mousedown", doMouseDown, false);
+    gl.canvas.addEventListener("DOMMouseScroll", doMouseWheel, false);
+
     this.setFrustum(fovIn, aspectIn, zNearIn, zFarIn);
 }

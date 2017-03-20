@@ -37,22 +37,24 @@ function grabCanvas(canvasElementName) {
 }
 
 // This is called with established context and shaders loaded
-function glRoutine(gl, vs, fs, ts, cs, s_Tris, s_Temps, s_Inds) {
+function glRoutine(gl, vs, fs,
+                   // ts, cs,
+                   s_Tris, s_Temps, s_Inds, s_Meta) {
     var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-    var arrays = {
-        a_position: {
-            numComponents: 3,
-            data: ts.split(',') // Split data on comma
-        },
-        a_color: {
-            numComponents: 3,
-            type: gl.UNSIGNED_BYTE,
-            normalized: true,
-            data: new Uint8Array(
-                cs.split(',')   // Split data on comma
-            )}
-    };
+    // var arrays = {
+    //     a_position: {
+    //         numComponents: 3,
+    //         data: ts.split(',') // Split data on comma
+    //     },
+    //     a_color: {
+    //         numComponents: 3,
+    //         type: gl.UNSIGNED_BYTE,
+    //         normalized: true,
+    //         data: new Uint8Array(
+    //             cs.split(',')   // Split data on comma
+    //         )}
+    // };
 
     var small_arrays = {
         a_position: {
@@ -102,7 +104,11 @@ function glRoutine(gl, vs, fs, ts, cs, s_Tris, s_Temps, s_Inds) {
 
     modelMatrix.placeCamera([0, 1, 1], tarPos, up);
 
-    // modelMatrix.translateWorld([-50, -75, -15]); // Center the model
+    var centerModel = new Float32Array(s_Meta.split(','));
+
+    centerModel = twgl.v3.negate(centerModel);
+
+    modelMatrix.translateWorld(centerModel);
 
     function drawScene(now) {
 
@@ -137,6 +143,7 @@ function main() {
     var small_trianglePromise = getDataSourcePromise("data/welding_sim.triangles");
     var small_temperaturePromise = getDataSourcePromise("data/welding_sim.temperatures");
     var small_indexPromise = getDataSourcePromise("data/welding_sim.indices");
+    var small_metaPromise = getDataSourcePromise("data/welding_sim.metafile");
 
     var vertexShaderPromise = getDataSourcePromise("shaders/vertexShader.glsl.c");
     var fragmentShaderPromise = getDataSourcePromise("shaders/fragmentShader.glsl.c");
@@ -151,6 +158,7 @@ function main() {
             small_trianglePromise,
             small_temperaturePromise,
             small_indexPromise,
+            small_metaPromise,
         ]
         // ... then ...
     ).then(function(value) {
@@ -162,12 +170,13 @@ function main() {
         var small_triangleSource = value[4];
         var small_temperatureSource = value[5];
         var small_indexSource = value[6];
+        var small_metaSource = value[7];
 
         // ... call the GL routine (i.e. do the graphics stuff)
         glRoutine(gl,
                   vertexShaderSource, fragmentShaderSource,
-                  triangleSource, colorSource, // Let's see if we can't to this globally?
-                  small_triangleSource, small_temperatureSource, small_indexSource
+                  // triangleSource, colorSource, // Let's see if we can't to this globally?
+                  small_triangleSource, small_temperatureSource, small_indexSource, small_metaSource
                  );
     });
 };
