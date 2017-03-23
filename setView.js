@@ -50,9 +50,8 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     this.targetCameraVector = twgl.v3.create(0, 0, 0);
     this.worldTranslation = twgl.v3.create(0, 0, 0);
 
-    that.rotPhi = twgl.m4.identity();
-    that.rotTheta = twgl.m4.identity();
-    that.altRot = twgl.m4.identity();
+    that.rotMatrixFromQuaternion = twgl.m4.identity();
+
     /**
      * Create the frustum of our view.
      * @param {float} fovIn - [OPTIONAL] Field Of View -- The angle with which
@@ -129,9 +128,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         this.modelView = twgl.m4.multiply(this.projectionMatrix, this.viewMatrix);
         this.modelView = twgl.m4.multiply(this.modelView, this.worldMatrix);
         this.modelView = twgl.m4.translate(this.modelView, twgl.v3.negate(this.worldTranslation));
-        // this.modelView = twgl.m4.multiply(this.modelView, this.rotPhi);
-        // this.modelView = twgl.m4.multiply(this.modelView, this.rotTheta);
-        this.modelView = twgl.m4.multiply(this.modelView, this.altRot);
+        this.modelView = twgl.m4.multiply(this.modelView, this.rotMatrixFromQuaternion);
         this.modelView = twgl.m4.translate(this.modelView, this.worldTranslation);
 
 
@@ -149,24 +146,19 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     };
 
     /** Variables for tracking the mouse movement and dragging events. */
-    var x_center = gl.canvas.clientWidth / 2;
-    var x_prev = 0,
-        x_now = 0,
-        dx = 0;
-    var y_center = gl.canvas.clientHeight /2;
-    var y_prev = 0,
-        y_now = 0,
-        dy = 0;
+    var x_center = gl.canvas.clientWidth / 2,
+        x_prev = 0,
+        x_now = 0;
 
+    var y_center = gl.canvas.clientHeight /2,
+        y_prev = 0,
+        y_now = 0;
+
+    var start_mouse = false;
     var dragging = false;
     var translating_model = false;
 
-    var phi = 0;
-    var dphi = 0;
-    var theta = 0;
-    var dtheta = 0;
     var thetaAxis = twgl.v3.create(0, 0, 0);
-
     /**
      * Callback function for a mouse-button-down event. Sets dragging
      * to true and adds two eventListeners (one for mouse movement and
@@ -177,6 +169,8 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         if (dragging || translating_model) {
             return;
         }
+
+        start_mouse = true;
 
         if (!event.ctrlKey) {
             dragging = true;
@@ -192,7 +186,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         prevx = event.clientX;
         prevy = event.clientY;
 
-        // Create an orthogonal vector to eye vector and up vector
+        // Create a vector thats orhthogonal to eye- and up vector
         thetaAxis = twgl.v3.cross(that.targetCameraVector, that.upVector);
     }
 
@@ -207,59 +201,30 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
             return;
         }
 
+        if (start_mouse){
+            // This prevents a resetting effect when drag-and-dropping over
+            // the screen.
+            x_prev = event.clientX - x_center;
+            y_prev = y_center - event.clientY;
+            start_mouse = false;
+            return;
+        }
+
         // Get current coordinates
         x_now = event.clientX - x_center;
         y_now = y_center - event.clientY;
-        dx = x_now - x_prev;
-        dy = y_now - y_prev;
 
-        quat = quaternionRot(
+        var differentialQuat = getDifferentialQuatMatrix(
             x_now, y_now,
             x_prev, y_prev,
-            radius=1000,
+            radius=200,
             x_axis=twgl.v3.normalize(twgl.v3.cross(that.targetCameraVector, that.upVector)),
             y_axis=twgl.v3.normalize(twgl.v3.negate(that.upVector)),
             z_axis=twgl.v3.normalize(twgl.v3.negate(that.targetCameraVector))
         );
-        that.altRot = twgl.m4.multiply(quat, that.altRot);
-        // Invert up-and-down dragging logic when we face the back
-        var front = (Math.abs(phi) < Math.PI/2);
-        if (!front) {
-            dy = - dy;
-        }
+        // Update the rotation matrix
+        that.rotMatrixFromQuaternion = twgl.m4.multiply(differentialQuat, that.rotMatrixFromQuaternion);
 
-        // Set interval
-        dphi = 10/gl.canvas.clientWidth * dx;
-        dtheta = 10/gl.canvas.clientHeight * dy;
-
-        phi = phi + dphi;
-        theta = theta + dtheta;
-
-        // Clamp the angles
-        if (phi < -Math.PI) {
-            phi = Math.PI;
-        } else if (phi > Math.PI) {
-            phi = -Math.PI;
-        };
-
-        if (theta > Math.PI/2) {
-            theta = Math.PI/2;
-        }
-        else if (theta < -Math.PI/2) {
-            theta = -Math.PI/2;
-        };
-
-        // Note: at some point I would like to do this with quaternios
-        // or euler angles...
-        // http://math.hws.edu/graphicsbook/demos/c7/rotators.html
-        // Set the rotations
-        that.rotPhi = twgl.m4.axisRotation(that.upVector, phi);
-        that.rotTheta = twgl.m4.axisRotation(thetaAxis, theta);
-        // console.log('rotPhi', that.rotPhi);
-        // console.log('rotTheta', that.rotTheta);
-        console.log('quatRot', that.altRot);
-
-        // Update coordinates
         x_prev = x_now;
         y_prev = y_now;
     }
@@ -276,38 +241,71 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         }
         document.removeEventListener("mousemove", doMouseMove, false);
         document.removeEventListener("mouseup", doMouseUp, false);
-        dx = 0;
         prevx = 0;
-        dy = 0;
         prevy = 0;
 
         dragging = false;
     }
 
-    function quaternionRot(x_1, y_1, x_2, y_2, radius, x_axis, y_axis, z_axis){
-        // Experimental rotations with quaternions.
+    /**
+     * getDifferentialQuatMatrix
+     *
+     * Given two points on the screen with x and y components, calculate a
+     * differential rotation matrix based on quaternions.
+     * @param {float} x_start - Starting point x coordinate
+     * @param {float} y_start - Starting point y coordinate
+     * @param {float} x_end - End point x coordinate
+     * @param {float} y_end - End point y coordinate
+     * @param {float} radius - The radius of the sphere. This affects how quick
+     * the rotations are with respect to mouse movements
+     * @param {vec3} reference_frame_x - A vector that defines x on the screen
+     * @param {vec3} reference_frame_y - A vector that defines y on the screen
+     * @param {vec3} reference_frame_z - A vector pointing towards the viewer
+     * @returns {mat4} rotMatrixQuat - A differential quaternion matrix
+     */
+    function getDifferentialQuatMatrix(
+        x_start, y_start,
+        x_end, y_end,
+        radius,
+        reference_frame_x, reference_frame_y, reference_frame_z){
 
-        // Define a sphere. Return the z-coordinate on a sphere.
-        function z_on_sphere(x, y) {
-            return Math.sqrt(radius*radius - x*x - y*y);
+        // Define a surface on which we want to measure our mouse movements
+        function z_on_surface(x, y) {
+            var dd = x*x + y*y;
+            if (dd < radius*radius/2){
+                // A regular sphere
+                return Math.sqrt(radius*radius - dd);
+            } else {
+                // A hyperbolic surface that diverges at the screen center
+                return radius*radius/2/Math.sqrt(dd);
+            }
         }
-        var v1 = [x_1, y_1, z_on_sphere(x_1, y_1)];
+
+        // Define two normalised vectors from the center of the sphere
+        var v1 = [x_start, y_start, z_on_surface(x_start, y_start)];
         v1 = twgl.v3.normalize(v1);
-        var v2 = [x_2, y_2, z_on_sphere(x_2, y_2)];
+        var v2 = [x_end, y_end, z_on_surface(x_end, y_end)];
         v2 = twgl.v3.normalize(v2);
 
+        // Angle by which to rotate
         var angle = Math.acos(twgl.v3.dot(v1, v2));
+        // Axis around which to rotate
         var axis  = twgl.v3.cross(v1, v2);
         axis = twgl.v3.normalize(axis);
+
+        // If we get an invalid angle we dont rotate at all.
         if (isNaN(angle)){
             angle = 0;
             axis = twgl.v3.create(1, 0, 0); // Direction does not matter, angle is 0 anyway.
         }
-        var qw = Math.cos(angle/2),
-            qx = twgl.v3.dot(axis, twgl.v3.normalize(x_axis))*Math.sin(angle/2),
-            qy = twgl.v3.dot(axis, twgl.v3.normalize(y_axis))*Math.sin(angle/2),
-            qz = twgl.v3.dot(axis, twgl.v3.normalize(z_axis))*Math.sin(angle/2);
 
+        // Calculate the quaternion
+        var qw = Math.cos(angle/2),
+            qx = twgl.v3.dot(axis, twgl.v3.normalize(reference_frame_x))*Math.sin(angle/2),
+            qy = twgl.v3.dot(axis, twgl.v3.normalize(reference_frame_y))*Math.sin(angle/2),
+            qz = twgl.v3.dot(axis, twgl.v3.normalize(reference_frame_z))*Math.sin(angle/2);
+
+        // Generate a matrix from the quaternion
         var rotMatrixQuat = twgl.m4.identity();
         rotMatrixQuat[0] = 1 - 2*(qy*qy + qz*qz);
         rotMatrixQuat[1] = 2*(qx*qy + qw*qz);
@@ -320,6 +318,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         rotMatrixQuat[8] = 2*(qw*qy + qx*qz);
         rotMatrixQuat[9] = 2*(qy*qz - qw*qx);
         rotMatrixQuat[10] = 1 - 2*(qx*qx + qy*qy);
+
         return rotMatrixQuat;
     }
 
