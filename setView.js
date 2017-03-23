@@ -52,7 +52,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
     that.rotPhi = twgl.m4.identity();
     that.rotTheta = twgl.m4.identity();
-
+    that.altRot = twgl.m4.identity();
     /**
      * Create the frustum of our view.
      * @param {float} fovIn - [OPTIONAL] Field Of View -- The angle with which
@@ -129,11 +129,12 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         this.modelView = twgl.m4.multiply(this.projectionMatrix, this.viewMatrix);
         this.modelView = twgl.m4.multiply(this.modelView, this.worldMatrix);
         this.modelView = twgl.m4.translate(this.modelView, twgl.v3.negate(this.worldTranslation));
-        this.modelView = twgl.m4.multiply(this.modelView, this.rotPhi);
-        this.modelView = twgl.m4.multiply(this.modelView, this.rotTheta);
+        // this.modelView = twgl.m4.multiply(this.modelView, this.rotPhi);
+        // this.modelView = twgl.m4.multiply(this.modelView, this.rotTheta);
+        this.modelView = twgl.m4.multiply(this.modelView, this.altRot);
         this.modelView = twgl.m4.translate(this.modelView, this.worldTranslation);
 
-        
+
         this.resetZoom();
         /**
          * this.worldState gives the state of the coordinate system.
@@ -212,6 +213,15 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         dx = x_now - x_prev;
         dy = y_now - y_prev;
 
+        quat = quaternionRot(
+            x_now, y_now,
+            x_prev, y_prev,
+            radius=1000,
+            x_axis=twgl.v3.normalize(twgl.v3.cross(that.targetCameraVector, that.upVector)),
+            y_axis=twgl.v3.normalize(twgl.v3.negate(that.upVector)),
+            z_axis=twgl.v3.normalize(twgl.v3.negate(that.targetCameraVector))
+        );
+        that.altRot = twgl.m4.multiply(quat, that.altRot);
         // Invert up-and-down dragging logic when we face the back
         var front = (Math.abs(phi) < Math.PI/2);
         if (!front) {
@@ -245,6 +255,9 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         // Set the rotations
         that.rotPhi = twgl.m4.axisRotation(that.upVector, phi);
         that.rotTheta = twgl.m4.axisRotation(thetaAxis, theta);
+        // console.log('rotPhi', that.rotPhi);
+        // console.log('rotTheta', that.rotTheta);
+        console.log('quatRot', that.altRot);
 
         // Update coordinates
         x_prev = x_now;
@@ -270,6 +283,46 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
         dragging = false;
     }
+
+    function quaternionRot(x_1, y_1, x_2, y_2, radius, x_axis, y_axis, z_axis){
+        // Experimental rotations with quaternions.
+
+        // Define a sphere. Return the z-coordinate on a sphere.
+        function z_on_sphere(x, y) {
+            return Math.sqrt(radius*radius - x*x - y*y);
+        }
+        var v1 = [x_1, y_1, z_on_sphere(x_1, y_1)];
+        v1 = twgl.v3.normalize(v1);
+        var v2 = [x_2, y_2, z_on_sphere(x_2, y_2)];
+        v2 = twgl.v3.normalize(v2);
+
+        var angle = Math.acos(twgl.v3.dot(v1, v2));
+        var axis  = twgl.v3.cross(v1, v2);
+        axis = twgl.v3.normalize(axis);
+        if (isNaN(angle)){
+            angle = 0;
+            axis = twgl.v3.create(1, 0, 0); // Direction does not matter, angle is 0 anyway.
+        }
+        var qw = Math.cos(angle/2),
+            qx = twgl.v3.dot(axis, twgl.v3.normalize(x_axis))*Math.sin(angle/2),
+            qy = twgl.v3.dot(axis, twgl.v3.normalize(y_axis))*Math.sin(angle/2),
+            qz = twgl.v3.dot(axis, twgl.v3.normalize(z_axis))*Math.sin(angle/2);
+
+        var rotMatrixQuat = twgl.m4.identity();
+        rotMatrixQuat[0] = 1 - 2*(qy*qy + qz*qz);
+        rotMatrixQuat[1] = 2*(qx*qy + qw*qz);
+        rotMatrixQuat[2] = 2*(qx*qz - qw*qy);
+        rotMatrixQuat[3] = 0;
+        rotMatrixQuat[4] = 2*(qx*qy - qw*qz);
+        rotMatrixQuat[5] = 1 - 2*(qx*qx + qz*qz);
+        rotMatrixQuat[6] = 2*(qw*qx + qy*qz);
+        rotMatrixQuat[7] = 0;
+        rotMatrixQuat[8] = 2*(qw*qy + qx*qz);
+        rotMatrixQuat[9] = 2*(qy*qz - qw*qx);
+        rotMatrixQuat[10] = 1 - 2*(qx*qx + qy*qy);
+        return rotMatrixQuat;
+    }
+
     var delta;
     function doMouseWheel(event){
         delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
