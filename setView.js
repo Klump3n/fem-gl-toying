@@ -159,6 +159,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     var translating_model = false;
 
     var thetaAxis = twgl.v3.create(0, 0, 0);
+
     /**
      * Callback function for a mouse-button-down event. Sets dragging
      * to true and adds two eventListeners (one for mouse movement and
@@ -215,12 +216,12 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         y_now = y_center - event.clientY;
 
         var differentialQuat = getDifferentialQuatMatrix(
-            x_now, y_now,
-            x_prev, y_prev,
+            x_start=x_prev, y_start=y_prev,
+            x_end=x_now, y_end=y_now,
             radius=200,
-            x_axis=twgl.v3.normalize(twgl.v3.cross(that.targetCameraVector, that.upVector)),
-            y_axis=twgl.v3.normalize(twgl.v3.negate(that.upVector)),
-            z_axis=twgl.v3.normalize(twgl.v3.negate(that.targetCameraVector))
+            x_axis=twgl.v3.normalize(twgl.v3.cross(that.upVector, that.targetCameraVector)),
+            y_axis=twgl.v3.normalize(that.upVector),
+            z_axis=twgl.v3.normalize(that.targetCameraVector)
         );
         // Update the rotation matrix
         that.rotMatrixFromQuaternion = twgl.m4.multiply(differentialQuat, that.rotMatrixFromQuaternion);
