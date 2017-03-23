@@ -140,7 +140,74 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line67">line 67</a>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line76">line 76</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="worldState"><span class="type-signature"></span>worldState<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    this.worldState gives the state of the coordinate system.
+Matrix organisation is as follows
+w0 w4 w8  w12 -- x-axis, 3 coordinates and 1 translation
+w1 w5 w9  w13 -- y-axis, 3 coordinates and 1 translation
+w2 w6 w10 w14 -- z-axis, 3 coordinates and 1 translation
+w3 w7 w11 w15
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line144">line 144</a>
     </li></ul></dd>
     
 
@@ -552,7 +619,7 @@ then updates the modelView.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line79">line 79</a>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line86">line 86</a>
     </li></ul></dd>
     
 
@@ -755,7 +822,315 @@ can see objects in our frustum.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line59">line 59</a>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line66">line 66</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="translateWorld"><span class="type-signature"></span>translateWorld<span class="signature">(translate)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Translates the world by a given vector.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>translate</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">vec3</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line118">line 118</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="updateCamera"><span class="type-signature"></span>updateCamera<span class="signature">(viewerPosition, targetPosition, upVector)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Update the viewer position.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>viewerPosition</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">vec3</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The position of the viewer.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>targetPosition</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">vec3</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The position of the target.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>upVector</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">vec3</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">A vector that points upwards.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line109">line 109</a>
     </li></ul></dd>
     
 
@@ -837,7 +1212,7 @@ can see objects in our frustum.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line89">line 89</a>
+        <a href="setView.js.html">setView.js</a>, <a href="setView.js.html#line128">line 128</a>
     </li></ul></dd>
     
 
@@ -901,13 +1276,13 @@ can see objects in our frustum.</td>
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ModelMatrix">ModelMatrix</a></li><li><a href="global.html#placeCamera">placeCamera</a></li><li><a href="global.html#projectionMatrix">projectionMatrix</a></li><li><a href="global.html#setFrustum">setFrustum</a></li><li><a href="global.html#updateView">updateView</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ModelMatrix">ModelMatrix</a></li><li><a href="global.html#placeCamera">placeCamera</a></li><li><a href="global.html#projectionMatrix">projectionMatrix</a></li><li><a href="global.html#setFrustum">setFrustum</a></li><li><a href="global.html#translateWorld">translateWorld</a></li><li><a href="global.html#updateCamera">updateCamera</a></li><li><a href="global.html#updateView">updateView</a></li><li><a href="global.html#worldState">worldState</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Thu Mar 02 2017 17:06:17 GMT+0100 (CET)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Thu Mar 09 2017 12:59:30 GMT+0100 (CET)
 </footer>
 
 <script> prettyPrint(); </script>

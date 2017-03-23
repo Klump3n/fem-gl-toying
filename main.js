@@ -38,52 +38,47 @@ function grabCanvas(canvasElementName) {
 
 // This is called with established context and shaders loaded
 function glRoutine(gl, vs, fs,
-                   // ts, cs,
-                   s_Tris, s_Temps, s_Inds, s_Meta) {
+                   model_triangles, model_temperatures, model_indices, model_metadata) {
     var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-    // var arrays = {
-    //     a_position: {
-    //         numComponents: 3,
-    //         data: ts.split(',') // Split data on comma
-    //     },
-    //     a_color: {
-    //         numComponents: 3,
-    //         type: gl.UNSIGNED_BYTE,
-    //         normalized: true,
-    //         data: new Uint8Array(
-    //             cs.split(',')   // Split data on comma
-    //         )}
-    // };
-
-    var small_arrays = {
+    var indexed_arrays = {
+        indices: {              // NOTE: This must be named indices or it will not work.
+            numComponents: 1,
+            data: model_indices.split(',')
+        },
         a_position: {
             numComponents: 3,
-            data: s_Tris.split(',')
+            data: model_triangles.split(',')
         },
         a_color: {
             numComponents: 3,
             type: gl.UNSIGNED_BYTE,
             normalized: true,
             data: new Uint8Array(
-                s_Temps.split(',')
+                model_temperatures.split(',')
             )
-        },
-        indices: {              // NOTE: This must be named indices or it will not work.
-            numComponents: 1,
-            data: s_Inds.split(',')
         }
     };
 
+
     var modelMatrix = new ModelMatrix(gl);
 
-    var camPos = [1, 0, 1000];
-    var tarPos = [0, 0, 0];
+    var centerModel = new Float32Array(model_metadata.split(','));
+
+    var scaleTheWorldBy = 150;
+    var tarPos = twgl.v3.mulScalar(centerModel, scaleTheWorldBy);
+    var camPos = twgl.v3.create(tarPos[0], tarPos[1], 110); // Center the z-axis over the model
     var up = [0, -1, 0];
+
     modelMatrix.placeCamera(camPos, tarPos, up);
 
-    var bufferInfo = twgl.createBufferInfoFromArrays(gl, small_arrays);
-    // var bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+    // Place the center of rotation into the center of the model
+    modelMatrix.translateWorld(twgl.v3.negate(centerModel));
+
+    // Automate this...
+    modelMatrix.scaleWorld(scaleTheWorldBy);
+
+    var bufferInfo = twgl.createBufferInfoFromArrays(gl, indexed_arrays);
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -98,17 +93,8 @@ function glRoutine(gl, vs, fs,
         then = 0,
         dt = 0;
 
-    var rotationSpeed = 60;    // Degrees per second
 
     var transformationMatrix = twgl.m4.identity();
-
-    modelMatrix.placeCamera([0, 1, 1], tarPos, up);
-
-    var centerModel = new Float32Array(s_Meta.split(','));
-
-    centerModel = twgl.v3.negate(centerModel);
-
-    modelMatrix.translateWorld(centerModel);
 
     function drawScene(now) {
 
@@ -137,13 +123,10 @@ function main() {
     var gl = grabCanvas("webGlCanvas");
 
     // Promise to load the data from file.
-    var trianglePromise = getDataSourcePromise("data/f_bare.triangles");
-    var colorPromise = getDataSourcePromise("data/f_bare.colors");
-
-    var small_trianglePromise = getDataSourcePromise("data/welding_sim.triangles");
-    var small_temperaturePromise = getDataSourcePromise("data/welding_sim.temperatures");
-    var small_indexPromise = getDataSourcePromise("data/welding_sim.indices");
-    var small_metaPromise = getDataSourcePromise("data/welding_sim.metafile");
+    var trianglePromise = getDataSourcePromise("data/welding_sim.triangles");
+    var temperaturePromise = getDataSourcePromise("data/welding_sim.temperatures");
+    var indexPromise = getDataSourcePromise("data/welding_sim.indices");
+    var metaPromise = getDataSourcePromise("data/welding_sim.metafile");
 
     var vertexShaderPromise = getDataSourcePromise("shaders/vertexShader.glsl.c");
     var fragmentShaderPromise = getDataSourcePromise("shaders/fragmentShader.glsl.c");
@@ -151,32 +134,27 @@ function main() {
     // Once all the promises are resolved...
     Promise.all(
         [
-            trianglePromise,      // 0
-            colorPromise,         // 1
+            trianglePromise,
+            temperaturePromise,
+            indexPromise,
+            metaPromise,
             vertexShaderPromise,  // 2
             fragmentShaderPromise, // 3
-            small_trianglePromise,
-            small_temperaturePromise,
-            small_indexPromise,
-            small_metaPromise,
         ]
         // ... then ...
     ).then(function(value) {
         // ... assign data to variables and ...
         var triangleSource = value[0];
-        var colorSource = value[1];
-        var vertexShaderSource = value[2];
-        var fragmentShaderSource = value[3];
-        var small_triangleSource = value[4];
-        var small_temperatureSource = value[5];
-        var small_indexSource = value[6];
-        var small_metaSource = value[7];
+        var temperatureSource = value[1];
+        var indexSource = value[2];
+        var metaSource = value[3];
+        var vertexShaderSource = value[4];
+        var fragmentShaderSource = value[5];
 
         // ... call the GL routine (i.e. do the graphics stuff)
         glRoutine(gl,
                   vertexShaderSource, fragmentShaderSource,
-                  // triangleSource, colorSource, // Let's see if we can't to this globally?
-                  small_triangleSource, small_temperatureSource, small_indexSource, small_metaSource
+                  triangleSource, temperatureSource, indexSource, metaSource
                  );
     });
 };

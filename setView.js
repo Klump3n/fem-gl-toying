@@ -112,13 +112,26 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
 
     /**
      * Translates the world by a given vector.
+     * Actually only shifts the coordinate system?
      * @param {vec3} translate
      */
     this.translateWorld = function(translate ) {
         this.worldTranslation = translate;
-        this.worldMatrix = twgl.m4.translate(this.worldMatrix, translate);
+        this.worldMatrix = twgl.m4.translate(this.worldMatrix, this.worldTranslation);
     };
 
+
+    /**
+     * Scale the world up by a given factor.
+     * @param {float} scalingFactor
+     */
+    this.scaleWorld = function(scalingFactor) {
+        this.worldScale = scalingFactor;
+        this.worldMatrix = twgl.m4.scale(
+            this.worldMatrix,
+            twgl.v3.create(scalingFactor, scalingFactor, scalingFactor)
+        );
+    };
 
     /**
      * Update the modelView matrix.
@@ -131,8 +144,6 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         this.modelView = twgl.m4.multiply(this.modelView, this.rotMatrixFromQuaternion);
         this.modelView = twgl.m4.translate(this.modelView, this.worldTranslation);
 
-
-        this.resetZoom();
         /**
          * this.worldState gives the state of the coordinate system.
          * Matrix organisation is as follows
@@ -159,6 +170,21 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     var translating_model = false;
 
     var thetaAxis = twgl.v3.create(0, 0, 0);
+
+    /**
+     * doMouseWheel: callback function for mouse wheel events. I.e.: zooming in
+     * and out.
+     * @param {event} event
+     */
+    function doMouseWheel(event){
+        var factor = 10;
+        var delta = factor*Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
+
+        that.viewerPosition[2] = that.viewerPosition[2] + delta;
+        that.updateCamera(that.viewerPosition, that.targetPosition, that.upVector);
+
+        delta = 0;
+    }
 
     /**
      * Callback function for a mouse-button-down event. Sets dragging
@@ -198,7 +224,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      * @param {} event
      */
     function doMouseMove(event){
-        if (!dragging) {
+        if (!dragging && !translating_model) {
             return;
         }
 
@@ -211,23 +237,35 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
             return;
         }
 
-        // Get current coordinates
-        x_now = event.clientX - x_center;
-        y_now = y_center - event.clientY;
+        if (dragging) {
+            // Get current coordinates
+            x_now = event.clientX - x_center;
+            y_now = y_center - event.clientY;
 
-        var differentialQuat = getDifferentialQuatMatrix(
-            x_start=x_prev, y_start=y_prev,
-            x_end=x_now, y_end=y_now,
-            radius=200,
-            x_axis=twgl.v3.normalize(twgl.v3.cross(that.upVector, that.targetCameraVector)),
-            y_axis=twgl.v3.normalize(that.upVector),
-            z_axis=twgl.v3.normalize(that.targetCameraVector)
-        );
-        // Update the rotation matrix
-        that.rotMatrixFromQuaternion = twgl.m4.multiply(differentialQuat, that.rotMatrixFromQuaternion);
+            var differentialRotation = getDifferentialQuaternionRotation(
+                x_start=x_prev, y_start=y_prev,
+                x_end=x_now, y_end=y_now,
+                radius=200,
+                x_axis=twgl.v3.normalize(twgl.v3.cross(that.upVector, that.targetCameraVector)),
+                y_axis=twgl.v3.normalize(that.upVector),
+                z_axis=twgl.v3.normalize(that.targetCameraVector)
+            );
+            // Update the rotation matrix
+            that.rotMatrixFromQuaternion = twgl.m4.multiply(differentialRotation, that.rotMatrixFromQuaternion);
 
-        x_prev = x_now;
-        y_prev = y_now;
+            x_prev = x_now;
+            y_prev = y_now;
+        }
+
+        if (translating_model) {
+            // Get current coordinates
+            x_now = event.clientX - x_center;
+            y_now = y_center - event.clientY;
+
+            x_prev = x_now;
+            y_prev = y_now;
+        }
+
     }
 
     /**
@@ -249,7 +287,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
     }
 
     /**
-     * getDifferentialQuatMatrix
+     * getDifferentialQuaternionRotation
      *
      * Given two points on the screen with x and y components, calculate a
      * differential rotation matrix based on quaternions.
@@ -264,7 +302,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      * @param {vec3} reference_frame_z - A vector pointing towards the viewer
      * @returns {mat4} rotMatrixQuat - A differential quaternion matrix
      */
-    function getDifferentialQuatMatrix(
+    function getDifferentialQuaternionRotation(
         x_start, y_start,
         x_end, y_end,
         radius,
@@ -323,14 +361,6 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         return rotMatrixQuat;
     }
 
-    var delta;
-    function doMouseWheel(event){
-        delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
-    }
-
-    this.resetZoom = function() {
-        delta = 0;
-    };
 
     /** Initialise the eventListener for mouse-button-pressing */
     gl.canvas.addEventListener("mousedown", doMouseDown, false);
