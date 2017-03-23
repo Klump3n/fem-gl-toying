@@ -262,6 +262,15 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
             x_now = event.clientX - x_center;
             y_now = y_center - event.clientY;
 
+            var dx = x_prev - x_now,
+                dy = y_prev - y_now;
+
+            var damping = 10;
+            var transvec = twgl.v3.create(dx, dy, 0);
+            transvec = twgl.v3.mulScalar(transvec, 1/damping);
+            var translation = twgl.m4.translation(transvec);
+            that.worldMatrix = twgl.m4.multiply(translation, that.worldMatrix);
+
             x_prev = x_now;
             y_prev = y_now;
         }
@@ -275,7 +284,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
      * @param {} event
      */
     function doMouseUp(event){
-        if (!dragging) {
+        if (!dragging && !translating_model) {
             return;
         }
         document.removeEventListener("mousemove", doMouseMove, false);
@@ -284,6 +293,7 @@ function ModelMatrix(gl, fovIn, aspectIn, zNearIn, zFarIn) {
         prevy = 0;
 
         dragging = false;
+        translating_model = false;
     }
 
     /**
