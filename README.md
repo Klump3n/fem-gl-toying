@@ -10,3 +10,5 @@ to http://localhost:8000.
 
 This relies on [twgl.js](https://github.com/greggman/twgl.js/) to keep the number 
 of WebGL boilerplate lines low.
+
+This has been merged into [fem-gl](https://github.com/Klump3n/fem-gl), so don't expect anything new here.
